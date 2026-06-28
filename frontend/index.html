@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reel Routes — Festival Scouting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="sprocket"></div>
+      <div><h1>Reel Routes</h1><div class="sub">Festival Scouting</div></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="stat-chip">Mode <b id="modeFlag">—</b></div>
+    <div class="stat-chip">Matches <b id="matchCount">—</b></div>
+    <button class="btn ghost" style="width:auto;padding:8px 16px" onclick="UI.openDrawer()">View list</button>
+  </header>
+
+  <aside class="controls">
+    <div class="group">
+      <div class="legend">Your Film</div>
+      <label class="field"><span>Genre</span></label>
+      <div class="genre-chips" id="genreChips"></div>
+      <div class="two" style="margin-top:11px">
+        <label class="field"><span>Runtime (min)</span><input type="number" id="runtime" value="14" min="1"></label>
+        <label class="field"><span>Film budget ($)</span><input type="number" id="filmBudget" value="35000"></label>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="legend">Search Area</div>
+      <label class="field"><span>ZIP or City, State</span>
+        <div class="geo-wrap">
+          <input type="text" id="baseSearch" placeholder="e.g. 30009 or Alpharetta, GA" autocomplete="off">
+          <div class="geo-results" id="geoResults"></div>
+        </div>
+        <div class="geo-status" id="geoStatus"></div>
+      </label>
+      <label class="field"><span>Search radius <i class="range-val" id="radiusVal">600 mi</i></span>
+        <input type="range" id="radius" min="50" max="3000" step="50" value="600"></label>
+      <div class="two">
+        <label class="field"><span>Apply from</span><input type="date" id="dateFrom" value="2026-07-01"></label>
+        <label class="field"><span>To</span><input type="date" id="dateTo" value="2027-06-30"></label>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="legend">Budget &amp; Travel</div>
+      <div class="two">
+        <label class="field"><span>Entry budget ($)</span><input type="number" id="festBudget" value="2500"></label>
+        <label class="field"><span>Travel budget ($)</span><input type="number" id="travelBudget" value="6000"></label>
+      </div>
+      <div class="two">
+        <label class="field"><span>Cast/crew</span><input type="number" id="party" value="3" min="1"></label>
+        <label class="field"><span>Nights</span><input type="number" id="nights" value="3" min="1"></label>
+      </div>
+      <label class="field"><span>Lodging within <i class="range-val" id="lodgeRadVal">5 mi</i> of venue</span>
+        <input type="range" id="lodgeRad" min="1" max="30" step="1" value="5"></label>
+    </div>
+
+    <button class="btn" onclick="UI.runSearch()">Find festivals</button>
+    <button class="btn ghost" style="margin-top:9px" onclick="UI.resetView()">Reset map</button>
+  </aside>
+
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="map-legend">
+      <div class="row"><span class="dot" style="background:var(--amber)"></span> Tier 1 / Oscar-qualifying</div>
+      <div class="row"><span class="dot" style="background:var(--teal)"></span> Tier 2 / Regional</div>
+      <div class="row"><span class="dot" style="background:var(--muted)"></span> Tier 3 / Niche</div>
+      <div class="row"><span class="dot pin-pulse" style="width:10px;height:10px"></span> Your base</div>
+    </div>
+
+    <div class="drawer" id="drawer">
+      <div class="drawer-head">
+        <div><h2>Matches</h2><div class="count" id="drawerCount">Run a search to begin</div></div>
+        <div class="x" onclick="UI.closeDrawer()">✕</div>
+      </div>
+      <div class="drawer-body" id="cardList"><div class="empty">Set filters and hit <b style="color:var(--amber)">Find festivals</b>.</div></div>
+    </div>
+
+    <div class="detail" id="detail">
+      <div class="drawer-head">
+        <div class="back" onclick="UI.closeDetail()">‹ Back to matches</div>
+        <div class="x" onclick="UI.closeDetail()">✕</div>
+      </div>
+      <div class="detail-body" id="detailBody"></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
