@@ -96,13 +96,3 @@ frontend/
 | GET | `/api/rideshare?plat=&plng=&fid=` | Uber/Lyft estimate + deep-links |
 
 ---
-
-## Roadmap / good next steps for Claude Code
-
-- Replace `festivals.json` with a live FilmFreeway crawler or a maintained CSV.
-- Implement the Amadeus path in `flights.py` for reliable fares.
-- Persist the cache in Redis or SQLite instead of in-memory.
-- Add real festival messaging (FilmFreeway has no public API — likely email relay).
-- Add user accounts + saved festival lists.
-
-See `CLAUDE.md` for working notes geared to the Claude Code extension.
