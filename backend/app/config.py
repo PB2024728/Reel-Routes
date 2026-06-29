@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     nominatim_url: str = "https://nominatim.openstreetmap.org"
     nominatim_email: str = "you@example.com"
 
+    # Database
+    db_path: str = "reel_routes.db"  # relative to the backend/ directory
+
+    # Scheduler
+    catalog_sync_enabled: bool = True   # weekly FilmFreeway catalog discovery
+    field_refresh_enabled: bool = True  # daily per-festival deadline/fee refresh
+
     # Optional official APIs (leave blank to use scrapers/estimates)
     amadeus_client_id: str = ""
     amadeus_client_secret: str = ""
