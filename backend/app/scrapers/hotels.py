@@ -5,6 +5,7 @@ venue and a working booking deep-link. Live scraping via Playwright is optional;
 estimate fallback is always available.
 """
 from __future__ import annotations
+import math
 import urllib.parse
 import datetime as dt
 
@@ -21,18 +22,34 @@ def booking_link(city: str, checkin: str, nights: int, rooms: int) -> str:
     return "https://www.booking.com/searchresults.html?" + urllib.parse.urlencode(params)
 
 
-def _estimate(city: str, radius_mi: float, checkin: str, nights: int,
-              rooms: int) -> list[dict]:
-    base = 145
+def _offset_coords(lat: float, lng: float, dist_mi: float, bearing_deg: float):
+    """Return (lat, lng) displaced dist_mi from the origin in the given compass bearing."""
+    d = dist_mi / 3959.0
+    b = math.radians(bearing_deg)
+    lat1, lng1 = math.radians(lat), math.radians(lng)
+    lat2 = math.asin(math.sin(lat1) * math.cos(d) + math.cos(lat1) * math.sin(d) * math.cos(b))
+    lng2 = lng1 + math.atan2(math.sin(b) * math.sin(d) * math.cos(lat1),
+                              math.cos(d) - math.sin(lat1) * math.sin(lat2))
+    return round(math.degrees(lat2), 5), round(math.degrees(lng2), 5)
+
+
+def _estimate(city: str, venue_lat: float, venue_lng: float, radius_mi: float,
+              checkin: str, nights: int, rooms: int) -> list[dict]:
+    base_rate = 145
     link = booking_link(city, checkin, nights, rooms)
+    # bearings spread hotels around the venue so map routes look distinct
     candidates = [
-        {"name": "Downtown boutique (sample)", "nightly": base + 40, "dist_mi": 0.6, "rating": 4.5},
-        {"name": "Midscale chain (sample)", "nightly": base, "dist_mi": 1.8, "rating": 4.1},
-        {"name": "Budget inn (sample)", "nightly": base - 55, "dist_mi": 4.2, "rating": 3.7},
+        {"name": "Downtown boutique (sample)", "nightly": base_rate + 40, "dist_mi": 0.6, "rating": 4.5, "_bearing": 45},
+        {"name": "Midscale chain (sample)",    "nightly": base_rate,      "dist_mi": 1.8, "rating": 4.1, "_bearing": 200},
+        {"name": "Budget inn (sample)",        "nightly": base_rate - 55, "dist_mi": 4.2, "rating": 3.7, "_bearing": 300},
     ]
     out = []
     for c in candidates:
         if c["dist_mi"] <= radius_mi:
+            bearing = c.pop("_bearing")
+            lat, lng = _offset_coords(venue_lat, venue_lng, c["dist_mi"], bearing)
+            c["lat"] = lat
+            c["lng"] = lng
             c["booking_url"] = link
             c["live"] = False
             out.append(c)
@@ -81,4 +98,4 @@ async def fetch(city: str, venue_lat: float, venue_lng: float, radius_mi: float,
         except Exception as e:  # noqa: BLE001
             print(f"[hotels] scrape failed: {e}")
 
-    return _estimate(city, radius_mi, checkin, nights, rooms), False
+    return _estimate(city, venue_lat, venue_lng, radius_mi, checkin, nights, rooms), False

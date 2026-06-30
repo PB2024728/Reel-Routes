@@ -42,6 +42,7 @@ async def _job_field_refresh() -> None:
     if not settings.enable_live_scraping:
         return
 
+    import asyncio
     from sqlalchemy import select
     from .db import FestivalRow
     from .scrapers import filmfreeway
@@ -53,14 +54,18 @@ async def _job_field_refresh() -> None:
             )
         ).scalars().all()
 
+        sem = asyncio.Semaphore(4)  # max 4 concurrent scrapes — polite to FilmFreeway
         refreshed = errors = 0
-        for row in rows:
+
+        async def _refresh_one(row: FestivalRow) -> None:
+            nonlocal refreshed, errors
             if not row.filmfreeway_url:
-                continue
-            data, live = await filmfreeway.refresh_festival(row.filmfreeway_url)
+                return
+            async with sem:
+                data, live = await filmfreeway.refresh_festival(row.filmfreeway_url)
             if not (live and data):
                 errors += 1
-                continue
+                return
             if data.get("base_fee") is not None:
                 row.scraped_fee = data["base_fee"]
                 row.base_fee = data["base_fee"]
@@ -69,6 +74,7 @@ async def _job_field_refresh() -> None:
             row.last_scraped_at = datetime.now(timezone.utc).isoformat()
             refreshed += 1
 
+        await asyncio.gather(*[_refresh_one(r) for r in rows])
         await session.commit()
         log.info(
             "[scheduler] field refresh: %d/%d updated, %d errors",

@@ -19,7 +19,8 @@ const API = (() => {
     health: () => get("/api/health"),
     geocode: (q, limit = 6) => get("/api/geocode", { q, limit }),
     festivals: (p) => get("/api/festivals", p),
-    flights: (origin, fid, date, dist_mi) => get("/api/flights", { origin, fid, date, dist_mi }),
+    flights: (origin, fid, date, dist_mi, origin_lat, origin_lng) =>
+      get("/api/flights", { origin, fid, date, dist_mi, origin_lat, origin_lng }),
     hotels: (fid, radius_mi, checkin, nights, rooms) =>
       get("/api/hotels", { fid, radius_mi, checkin, nights, rooms }),
     cars: (fid, pickup, dropoff) => get("/api/cars", { fid, pickup, dropoff }),

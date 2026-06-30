@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Boolean, Float, Integer, Text
+from sqlalchemy import Boolean, Float, Integer, Text, text
 
 from .config import settings
 
@@ -53,6 +53,9 @@ class FestivalRow(Base):
     attendees: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     filmfreeway_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
     airport: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    languages: Mapped[str] = mapped_column(Text, nullable=False, default="[]")  # JSON list; empty = accepts all
+    festival_start: Mapped[str | None] = mapped_column(Text, nullable=True)   # ISO date: screening window opens
+    festival_end: Mapped[str | None] = mapped_column(Text, nullable=True)     # ISO date: screening window closes
 
     # Lifecycle / scraping metadata
     status: Mapped[str] = mapped_column(Text, nullable=False, default="active")
@@ -65,6 +68,16 @@ class FestivalRow(Base):
 async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Additive migrations — safe to re-run; errors mean the column already exists
+        for stmt in [
+            "ALTER TABLE festivals ADD COLUMN languages TEXT NOT NULL DEFAULT '[]'",
+            "ALTER TABLE festivals ADD COLUMN festival_start TEXT",
+            "ALTER TABLE festivals ADD COLUMN festival_end TEXT",
+        ]:
+            try:
+                await conn.execute(text(stmt))
+            except Exception:
+                pass
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
@@ -90,6 +103,9 @@ def row_to_dict(row: FestivalRow) -> dict:
         "attendees": row.attendees,
         "filmfreeway_url": row.filmfreeway_url,
         "airport": row.airport,
+        "languages": json.loads(row.languages),
+        "festival_start": row.festival_start,
+        "festival_end": row.festival_end,
         "status": row.status,
         "last_scraped_at": row.last_scraped_at,
         "scraped_fee": row.scraped_fee,

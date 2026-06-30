@@ -6,3 +6,7 @@ venv/
 .DS_Store
 *.log
 .pytest_cache/
+*.db
+node_modules/
+dist/
+personal.yaml

@@ -1,4 +1,4 @@
-11<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -20,14 +20,22 @@
     <div class="spacer"></div>
     <div class="stat-chip">Mode <b id="modeFlag">—</b></div>
     <div class="stat-chip">Matches <b id="matchCount">—</b></div>
-    <button class="btn ghost" style="width:auto;padding:8px 16px" onclick="UI.openDrawer()">View list</button>
+<button class="btn ghost" style="width:auto;padding:8px 16px" onclick="UI.openSaved()">My List <b id="savedCount" style="color:var(--amber)">0</b></button>
+    <button class="btn ghost" style="width:auto;padding:8px 14px;font-size:18px;line-height:1" onclick="UI.openSettings()" title="Settings">⚙</button>
   </header>
 
   <aside class="controls">
+    <div class="ctrl-topbar">
+      <span class="ctrl-label">Filters</span>
+      <button class="ctrl-collapse" onclick="UI.toggleSidebar()" title="Collapse sidebar">◀</button>
+    </div>
+
     <div class="group">
-      <div class="legend">Your Film</div>
+      <div class="legend"><span>Your Film</span><button class="reset-btn" onclick="UI.resetFilm()">↺ Reset</button></div>
       <label class="field"><span>Genre</span></label>
       <div class="genre-chips" id="genreChips"></div>
+      <label class="field" style="margin-top:10px"><span>Film language(s)</span></label>
+      <div class="genre-chips" id="langChips"></div>
       <div class="two" style="margin-top:11px">
         <label class="field"><span>Runtime (min)</span><input type="number" id="runtime" value="14" min="1"></label>
         <label class="field"><span>Film budget ($)</span><input type="number" id="filmBudget" value="35000"></label>
@@ -35,7 +43,7 @@
     </div>
 
     <div class="group">
-      <div class="legend">Search Area</div>
+      <div class="legend"><span>Search Area</span><button class="reset-btn" onclick="UI.resetSearch()">↺ Reset</button></div>
       <label class="field"><span>ZIP or City, State</span>
         <div class="geo-wrap">
           <input type="text" id="baseSearch" placeholder="e.g. 30009 or Alpharetta, GA" autocomplete="off">
@@ -52,7 +60,7 @@
     </div>
 
     <div class="group">
-      <div class="legend">Budget &amp; Travel</div>
+      <div class="legend"><span>Budget &amp; Travel</span><button class="reset-btn" onclick="UI.resetBudget()">↺ Reset</button></div>
       <div class="two">
         <label class="field"><span>Entry budget ($)</span><input type="number" id="festBudget" value="2500"></label>
         <label class="field"><span>Travel budget ($)</span><input type="number" id="travelBudget" value="6000"></label>
@@ -65,11 +73,33 @@
         <input type="range" id="lodgeRad" min="1" max="30" step="1" value="5"></label>
     </div>
 
+    <div class="group">
+      <div class="legend"><span>Travel Needs</span><button class="reset-btn" onclick="UI.resetTravel()">↺ Reset</button></div>
+      <div class="trav-row">
+        <label class="trav-tog"><input type="checkbox" id="needFlights" checked onchange="UI.onTravelChange()">Flights</label>
+        <div class="trav-limit-input" id="limitFlight"><span>max/person</span>$<input type="number" id="maxFlight" value="800" min="0" onchange="UI.onTravelChange()"></div>
+      </div>
+      <div class="trav-row">
+        <label class="trav-tog"><input type="checkbox" id="needHotel" checked onchange="UI.onTravelChange()">Lodging</label>
+        <div class="trav-limit-input" id="limitHotel"><span>max/night</span>$<input type="number" id="maxHotel" value="200" min="0" onchange="UI.onTravelChange()"></div>
+      </div>
+      <div class="trav-row">
+        <label class="trav-tog"><input type="checkbox" id="needCar" checked onchange="UI.onTravelChange()">Rental car</label>
+        <div class="trav-limit-input" id="limitCar"><span>max/day</span>$<input type="number" id="maxCar" value="100" min="0" onchange="UI.onTravelChange()"></div>
+      </div>
+      <div class="trav-row">
+        <label class="trav-tog"><input type="checkbox" id="needRide" checked onchange="UI.onTravelChange()">Rideshare</label>
+      </div>
+    </div>
+
     <button class="btn" onclick="UI.runSearch()">Find festivals</button>
     <button class="btn ghost" style="margin-top:9px" onclick="UI.resetView()">Reset map</button>
   </aside>
 
   <div class="map-wrap">
+    <div class="mobile-overlay" id="mobileOverlay" onclick="UI.toggleSidebar()"></div>
+    <button class="sidebar-reopen" id="sidebarReopenBtn" onclick="UI.toggleSidebar()" style="display:none" title="Open filters">☰<br><span>Filters</span></button>
+    <button class="mobile-fab" onclick="UI.toggleSidebar()">☰ Filters</button>
     <div id="map"></div>
     <div class="map-legend">
       <div class="row"><span class="dot" style="background:var(--amber)"></span> Tier 1 / Oscar-qualifying</div>
@@ -81,9 +111,15 @@
     <div class="drawer" id="drawer">
       <div class="drawer-head">
         <div><h2>Matches</h2><div class="count" id="drawerCount">Run a search to begin</div></div>
+        <button id="shareBtn" class="btn ghost" style="padding:5px 11px;font-size:11px;letter-spacing:.4px;flex:none" onclick="UI.copyShareLink()">Share ↗</button>
         <div class="x" onclick="UI.closeDrawer()">✕</div>
       </div>
+      <div class="drawer-tabs">
+        <span class="dtab active" id="tabMatches" onclick="UI.showTab('matches')">Matches</span>
+        <span class="dtab" id="tabSaved" onclick="UI.showTab('saved')">My List <b id="savedTabCount">0</b></span>
+      </div>
       <div class="drawer-body" id="cardList"><div class="empty">Set filters and hit <b style="color:var(--amber)">Find festivals</b>.</div></div>
+      <div class="drawer-body" id="savedList" style="display:none"><div class="empty">Hit ☆ on any card to save a festival.</div></div>
     </div>
 
     <div class="detail" id="detail">
@@ -92,6 +128,23 @@
         <div class="x" onclick="UI.closeDetail()">✕</div>
       </div>
       <div class="detail-body" id="detailBody"></div>
+    </div>
+
+    <div class="settings-panel" id="settingsPanel">
+      <div class="drawer-head">
+        <div><h2>Settings</h2><div class="count">Visual preferences</div></div>
+        <div class="x" onclick="UI.closeSettings()">✕</div>
+      </div>
+      <div class="settings-body">
+        <div class="section-t" style="margin-top:0">Color Theme</div>
+        <div class="theme-swatches" id="themeSwatches"></div>
+        <div class="section-t">Custom Accent Color</div>
+        <div class="accent-row">
+          <input type="color" id="accentPicker" value="#f4b740">
+          <button class="btn" style="flex:1;padding:9px;font-size:13px;letter-spacing:.5px" onclick="UI.applyCustomAccent()">Apply</button>
+        </div>
+        <div class="settings-hint">Pick any accent color — hover states and darker shades auto-derive from it.</div>
+      </div>
     </div>
   </div>
 </div>

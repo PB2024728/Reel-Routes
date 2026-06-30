@@ -33,8 +33,7 @@ class Settings(BaseSettings):
     field_refresh_enabled: bool = True  # daily per-festival deadline/fee refresh
 
     # Optional official APIs (leave blank to use scrapers/estimates)
-    amadeus_client_id: str = ""
-    amadeus_client_secret: str = ""
+    serpapi_key: str = ""
 
 
 settings = Settings()

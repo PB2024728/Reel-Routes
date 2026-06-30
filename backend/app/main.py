@@ -4,9 +4,16 @@ Run:  uvicorn app.main:app --reload --port 8000
 Docs: http://127.0.0.1:8000/docs
 """
 from __future__ import annotations
+import asyncio
 import datetime as dt
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+# Playwright spawns a subprocess; on Windows the default SelectorEventLoop can't
+# do that — ProactorEventLoop is required (Python 3.14 reverted the 3.12 default).
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -88,6 +95,7 @@ async def search_festivals(
     lng: float,
     radius_mi: float = 600,
     genres: str = "",
+    languages: str = "",
     runtime: int = 15,
     fee_budget: int = 100,
     date_from: str = "2026-07-01",
@@ -101,6 +109,7 @@ async def search_festivals(
     ).scalars().all()
 
     sel = {g.strip() for g in genres.split(",") if g.strip()}
+    sel_lang = {l.strip() for l in languages.split(",") if l.strip()}
     d_from = dt.date.fromisoformat(date_from)
     d_to = dt.date.fromisoformat(date_to)
     out = []
@@ -115,7 +124,10 @@ async def search_festivals(
         )
         runtime_ok = runtime <= f["max_runtime"]
         fee_ok = f["base_fee"] <= fee_budget
-        if not (dist <= radius_mi and genre_hit and in_window):
+        # Language: empty festival list means "accepts all languages"
+        lang_ok = (not sel_lang or not f["languages"]
+                   or bool(sel_lang & set(f["languages"])))
+        if not (dist <= radius_mi and genre_hit and in_window and lang_ok):
             continue
         fit = (
             35 * genre_hit
@@ -149,10 +161,12 @@ async def get_flights(
     fid: int,
     date: str,
     dist_mi: float = 0,
+    origin_lat: float = 0,
+    origin_lng: float = 0,
     session: AsyncSession = Depends(get_session),
 ):
     row = await _get_festival_or_404(fid, session)
-    rows, live = await flights.fetch(origin, row.city, date, dist_mi)
+    rows, live = await flights.fetch(origin, row.airport, date, dist_mi, origin_lat, origin_lng)
     return {"live": live, "offers": rows}
 
 
@@ -277,6 +291,17 @@ async def admin_add_festival(
     await session.commit()
     await session.refresh(row)
     return {"ok": True, "festival": row_to_dict(row)}
+
+
+@app.post("/api/admin/field-refresh")
+async def admin_trigger_field_refresh(background_tasks: BackgroundTasks):
+    """Kick off a per-festival field refresh in the background and return immediately."""
+    async def _run():
+        from .scheduler import _job_field_refresh
+        await _job_field_refresh()
+
+    background_tasks.add_task(_run)
+    return {"ok": True, "message": "field refresh started in background"}
 
 
 @app.post("/api/admin/sync")
